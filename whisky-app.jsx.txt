@@ -1,0 +1,349 @@
+import { useState, useEffect } from "react";
+
+const AMBER = "#C8873A";
+const DARK = "#1A1008";
+const PEAT = "#2D1F0E";
+const GOLD = "#E8B84B";
+const CREAM = "#F5EDD8";
+const SMOKE = "#6B5A47";
+
+const initialForm = {
+  name: "",
+  distillery: "",
+  age: "",
+  region: "",
+  notes: "",
+  duft: 10,
+  smag: 10,
+  finish: 10,
+  balance: 5,
+  praeferance: 15,
+};
+
+const CRITERIA = [
+  { key: "duft", label: "Duft (næse)", max: 20, icon: "👃", description: "Aroma og kompleksitet i duften" },
+  { key: "smag", label: "Smag", max: 20, icon: "👅", description: "Smagsoplevelse og dybde" },
+  { key: "finish", label: "Finish (eftersmag)", max: 20, icon: "✨", description: "Varighed og kvalitet af eftersmagen" },
+  { key: "balance", label: "Balance & Kompleksitet", max: 10, icon: "⚖️", description: "Sammenhæng og lagdeling" },
+  { key: "praeferance", label: "Personlig Præference", max: 30, icon: "❤️", description: "Hvor glad er du for denne whisky?" },
+];
+
+function ScoreSlider({ criterion, value, onChange }) {
+  const pct = (value / criterion.max) * 100;
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+        <label style={{ fontFamily: "'Cinzel', serif", color: CREAM, fontSize: 13, letterSpacing: "0.08em", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 18 }}>{criterion.icon}</span>
+          {criterion.label}
+        </label>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+          <span style={{ fontFamily: "'Cinzel', serif", color: GOLD, fontSize: 22, fontWeight: 700 }}>{value}</span>
+          <span style={{ color: SMOKE, fontSize: 12 }}>/{criterion.max}</span>
+        </div>
+      </div>
+      <p style={{ color: SMOKE, fontSize: 11, marginBottom: 10, fontStyle: "italic" }}>{criterion.description}</p>
+      <div style={{ position: "relative", height: 6, background: "#3D2910", borderRadius: 3 }}>
+        <div style={{
+          position: "absolute", left: 0, top: 0, height: "100%",
+          width: `${pct}%`,
+          background: `linear-gradient(90deg, ${AMBER}, ${GOLD})`,
+          borderRadius: 3,
+          transition: "width 0.15s ease"
+        }} />
+        <input
+          type="range" min={0} max={criterion.max} value={value}
+          onChange={e => onChange(criterion.key, Number(e.target.value))}
+          style={{
+            position: "absolute", top: -8, left: 0, width: "100%", height: 22,
+            opacity: 0, cursor: "pointer", margin: 0
+          }}
+        />
+        <div style={{
+          position: "absolute", top: "50%", left: `${pct}%`,
+          transform: "translate(-50%, -50%)",
+          width: 16, height: 16, borderRadius: "50%",
+          background: GOLD,
+          border: `2px solid ${DARK}`,
+          boxShadow: `0 0 8px ${GOLD}88`,
+          pointerEvents: "none",
+          transition: "left 0.15s ease"
+        }} />
+      </div>
+    </div>
+  );
+}
+
+function TotalScore({ form }) {
+  const total = CRITERIA.reduce((sum, c) => sum + form[c.key], 0);
+  const pct = (total / 100) * 100;
+  let medal = "";
+  if (total >= 90) medal = "🏆 Mesterklasse";
+  else if (total >= 80) medal = "⭐ Fremragende";
+  else if (total >= 70) medal = "👍 Meget god";
+  else if (total >= 60) medal = "✓ God";
+  else medal = "→ Gennemsnitlig";
+
+  return (
+    <div style={{
+      background: `linear-gradient(135deg, #2D1F0E, #1A1008)`,
+      border: `1px solid ${AMBER}44`,
+      borderRadius: 12,
+      padding: "20px 24px",
+      textAlign: "center",
+      marginBottom: 24,
+      position: "relative",
+      overflow: "hidden"
+    }}>
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `radial-gradient(ellipse at center, ${AMBER}11 0%, transparent 70%)`,
+        pointerEvents: "none"
+      }} />
+      <div style={{ fontFamily: "'Cinzel', serif", color: SMOKE, fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 4 }}>
+        Total Score
+      </div>
+      <div style={{ fontFamily: "'Cinzel', serif", color: GOLD, fontSize: 56, fontWeight: 700, lineHeight: 1, marginBottom: 6 }}>
+        {total}
+      </div>
+      <div style={{ color: SMOKE, fontSize: 11, marginBottom: 12 }}>ud af 100 point</div>
+      <div style={{ height: 4, background: "#3D2910", borderRadius: 2, marginBottom: 12 }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${AMBER}, ${GOLD})`, borderRadius: 2, transition: "width 0.3s ease" }} />
+      </div>
+      <div style={{ fontFamily: "'Cinzel', serif", color: AMBER, fontSize: 14 }}>{medal}</div>
+    </div>
+  );
+}
+
+function WhiskyCard({ whisky, onDelete }) {
+  const total = CRITERIA.reduce((sum, c) => sum + whisky[c.key], 0);
+  return (
+    <div style={{
+      background: `linear-gradient(160deg, #2D1F0E 0%, #1A1008 100%)`,
+      border: `1px solid ${AMBER}33`,
+      borderRadius: 10,
+      padding: "18px 20px",
+      marginBottom: 14,
+      position: "relative",
+      overflow: "hidden",
+      transition: "border-color 0.2s"
+    }}
+      onMouseEnter={e => e.currentTarget.style.borderColor = AMBER + "88"}
+      onMouseLeave={e => e.currentTarget.style.borderColor = AMBER + "33"}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <div style={{ fontFamily: "'Cinzel', serif", color: CREAM, fontSize: 16, fontWeight: 700, marginBottom: 2 }}>{whisky.name}</div>
+          {whisky.distillery && <div style={{ color: SMOKE, fontSize: 12, marginBottom: 4 }}>{whisky.distillery}{whisky.age ? ` · ${whisky.age} år` : ""}{whisky.region ? ` · ${whisky.region}` : ""}</div>}
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontFamily: "'Cinzel', serif", color: GOLD, fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{total}</div>
+          <div style={{ color: SMOKE, fontSize: 10 }}>/ 100</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+        {CRITERIA.map(c => (
+          <div key={c.key} style={{ background: "#3D2910", borderRadius: 6, padding: "4px 10px", fontSize: 11 }}>
+            <span style={{ color: SMOKE }}>{c.icon} </span>
+            <span style={{ color: AMBER, fontWeight: 700 }}>{whisky[c.key]}</span>
+            <span style={{ color: SMOKE }}>/{c.max}</span>
+          </div>
+        ))}
+      </div>
+      {whisky.notes && <div style={{ color: SMOKE, fontSize: 12, fontStyle: "italic", marginTop: 10, borderTop: `1px solid ${AMBER}22`, paddingTop: 8 }}>"{whisky.notes}"</div>}
+      <button onClick={() => onDelete(whisky.id)} style={{
+        position: "absolute", top: 12, right: 12,
+        background: "none", border: "none", color: SMOKE,
+        cursor: "pointer", fontSize: 16, padding: "2px 6px",
+        opacity: 0.5, transition: "opacity 0.2s"
+      }}
+        onMouseEnter={e => e.target.style.opacity = 1}
+        onMouseLeave={e => e.target.style.opacity = 0.5}
+        title="Slet"
+      >✕</button>
+    </div>
+  );
+}
+
+export default function WhiskyApp() {
+  const [tab, setTab] = useState("add");
+  const [form, setForm] = useState(initialForm);
+  const [collection, setCollection] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("whisky_collection") || "[]"); } catch { return []; }
+  });
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem("whisky_collection", JSON.stringify(collection)); } catch {}
+  }, [collection]);
+
+  const handleChange = (key, val) => setForm(f => ({ ...f, [key]: val }));
+  const handleText = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+
+  const handleSave = () => {
+    if (!form.name.trim()) return;
+    setCollection(c => [{ ...form, id: Date.now() }, ...c]);
+    setForm(initialForm);
+    setSaved(true);
+    setTimeout(() => { setSaved(false); setTab("collection"); }, 800);
+  };
+
+  const handleDelete = id => setCollection(c => c.filter(w => w.id !== id));
+
+  const sorted = [...collection].sort((a, b) =>
+    CRITERIA.reduce((s, c) => s + b[c.key], 0) - CRITERIA.reduce((s, c) => s + a[c.key], 0)
+  );
+
+  const inputStyle = {
+    background: "#2D1F0E",
+    border: `1px solid ${AMBER}33`,
+    borderRadius: 8,
+    color: CREAM,
+    fontFamily: "'Lora', serif",
+    fontSize: 14,
+    padding: "10px 14px",
+    width: "100%",
+    outline: "none",
+    boxSizing: "border-box",
+    transition: "border-color 0.2s"
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: DARK,
+      fontFamily: "'Lora', serif",
+      color: CREAM,
+    }}>
+      {/* Google Fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+        input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; }
+        input::placeholder { color: #6B5A47; }
+        textarea::placeholder { color: #6B5A47; }
+        textarea { resize: vertical; }
+        * { box-sizing: border-box; }
+      `}</style>
+
+      {/* Header */}
+      <div style={{
+        background: `linear-gradient(180deg, #2D1F0E 0%, ${DARK} 100%)`,
+        borderBottom: `1px solid ${AMBER}33`,
+        padding: "28px 24px 20px",
+        textAlign: "center",
+        position: "relative",
+        overflow: "hidden"
+      }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `radial-gradient(ellipse at 50% 0%, ${AMBER}18 0%, transparent 60%)`,
+          pointerEvents: "none"
+        }} />
+        <div style={{ fontSize: 32, marginBottom: 4 }}>🥃</div>
+        <h1 style={{
+          fontFamily: "'Cinzel', serif",
+          color: GOLD,
+          fontSize: 26,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          margin: 0,
+          textShadow: `0 0 30px ${AMBER}66`
+        }}>WHISKY JOURNAL</h1>
+        <p style={{ color: SMOKE, fontSize: 12, letterSpacing: "0.15em", marginTop: 4 }}>SMAGNINGSNOTER & SCORES</p>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", borderBottom: `1px solid ${AMBER}22` }}>
+        {[["add", "Bedøm Whisky"], ["collection", `Samling (${collection.length})`]].map(([t, label]) => (
+          <button key={t} onClick={() => setTab(t)} style={{
+            flex: 1, padding: "14px 0",
+            background: tab === t ? `${AMBER}18` : "none",
+            border: "none", borderBottom: tab === t ? `2px solid ${AMBER}` : "2px solid transparent",
+            color: tab === t ? GOLD : SMOKE,
+            fontFamily: "'Cinzel', serif",
+            fontSize: 12, letterSpacing: "0.1em",
+            cursor: "pointer", transition: "all 0.2s"
+          }}>{label}</button>
+        ))}
+      </div>
+
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "24px 20px" }}>
+
+        {tab === "add" && (
+          <div>
+            {/* Whisky info */}
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontFamily: "'Cinzel', serif", color: AMBER, fontSize: 10, letterSpacing: "0.2em", marginBottom: 14 }}>WHISKY INFO</div>
+              <input name="name" value={form.name} onChange={handleText} placeholder="Whisky navn *" style={{ ...inputStyle, marginBottom: 10 }} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <input name="distillery" value={form.distillery} onChange={handleText} placeholder="Destilleri" style={inputStyle} />
+                <input name="age" value={form.age} onChange={handleText} placeholder="Alder (år)" style={inputStyle} />
+              </div>
+              <input name="region" value={form.region} onChange={handleText} placeholder="Region (f.eks. Speyside, Islay...)" style={{ ...inputStyle, marginBottom: 10 }} />
+              <textarea name="notes" value={form.notes} onChange={handleText} placeholder="Smagningsnoter..." rows={3} style={{ ...inputStyle }} />
+            </div>
+
+            {/* Divider */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+              <div style={{ flex: 1, height: 1, background: `${AMBER}33` }} />
+              <span style={{ fontFamily: "'Cinzel', serif", color: SMOKE, fontSize: 10, letterSpacing: "0.2em" }}>BEDØMMELSE</span>
+              <div style={{ flex: 1, height: 1, background: `${AMBER}33` }} />
+            </div>
+
+            {/* Live score */}
+            <TotalScore form={form} />
+
+            {/* Sliders */}
+            {CRITERIA.map(c => (
+              <ScoreSlider key={c.key} criterion={c} value={form[c.key]} onChange={handleChange} />
+            ))}
+
+            <button
+              onClick={handleSave}
+              disabled={!form.name.trim()}
+              style={{
+                width: "100%", padding: "16px",
+                background: saved ? "#2D5A27" : `linear-gradient(135deg, ${AMBER}, ${GOLD})`,
+                border: "none", borderRadius: 10,
+                fontFamily: "'Cinzel', serif",
+                color: saved ? "#A8D5A0" : DARK,
+                fontSize: 14, fontWeight: 700, letterSpacing: "0.1em",
+                cursor: form.name.trim() ? "pointer" : "not-allowed",
+                opacity: form.name.trim() ? 1 : 0.5,
+                transition: "all 0.3s",
+                marginTop: 8,
+                boxShadow: form.name.trim() ? `0 4px 20px ${AMBER}44` : "none"
+              }}
+            >
+              {saved ? "✓ GEMT!" : "GEM SMAGNING"}
+            </button>
+          </div>
+        )}
+
+        {tab === "collection" && (
+          <div>
+            {sorted.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0", color: SMOKE }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>🥃</div>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 14, marginBottom: 8 }}>Ingen whiskyer endnu</div>
+                <div style={{ fontSize: 13 }}>Bedøm din første whisky for at komme i gang</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontFamily: "'Cinzel', serif", color: SMOKE, fontSize: 10, letterSpacing: "0.2em", marginBottom: 16 }}>
+                  SORTERET EFTER SCORE
+                </div>
+                {sorted.map((w, i) => (
+                  <div key={w.id} style={{ position: "relative" }}>
+                    {i === 0 && <div style={{ position: "absolute", left: -8, top: 18, fontFamily: "'Cinzel', serif", color: GOLD, fontSize: 11, letterSpacing: "0.1em", transform: "rotate(-90deg) translateX(-50%)", transformOrigin: "left center", opacity: 0.6 }}>№1</div>}
+                    <WhiskyCard whisky={w} onDelete={handleDelete} />
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
